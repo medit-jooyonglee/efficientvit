@@ -342,7 +342,7 @@ def efficientvit_seg_l2(dataset: str, **kwargs) -> EfficientViTSeg:
 
 
 def efficientvit_seg_custom(*, backbone:str = 'efficientvit_backbone_l2', 
-                            # n_classes=150, 
+                            n_classes=150, 
                             **kwargs):
     from efficientvit.models.efficientvit import backbone as backbone_module
     
