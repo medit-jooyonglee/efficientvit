@@ -4,7 +4,15 @@ import torch
 import torch.nn as nn
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from efficientvit.models.nn.triton_rms_norm import TritonRMSNorm2dFunc
+try:
+    from efficientvit.models.nn.triton_rms_norm import TritonRMSNorm2dFunc
+    # if TritonRMSNorm2dFunc is None:
+    HAS_TRITON = True
+    # else:
+        # HAS_TRITON = False
+except (ImportError, ModuleNotFoundError):
+    HAS_TRITON = False
+    
 from efficientvit.models.utils import build_kwargs_from_config
 
 __all__ = ["LayerNorm2d", "TritonRMSNorm2d", "build_norm", "reset_bn", "set_norm_eps"]
@@ -21,8 +29,23 @@ class LayerNorm2d(nn.LayerNorm):
 
 class TritonRMSNorm2d(nn.LayerNorm):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return TritonRMSNorm2dFunc.apply(x, self.weight, self.bias, self.eps)
-
+# 2. Triton이 있으면 사용하고, 없으면 표준 PyTorch 연산으로 실행
+        if HAS_TRITON:
+            return TritonRMSNorm2dFunc.apply(x, self.weight, self.bias, self.eps)
+        else:
+            # RMSNorm의 표준 PyTorch 구현 (Triton 없이 작동)
+            # x: [Batch, Channel, Height, Width]
+            dims = (1,) # 채널 방향 정규화
+            # 1. 제곱 평균의 루트 (Root Mean Square) 계산
+            rms = torch.sqrt(torch.mean(x**2, dim=dims, keepdim=True) + self.eps)
+            # 2. 입력값을 rms로 나눔
+            out = x / rms
+            # 3. 학습 가능한 파라미터(weight, bias) 적용
+            if self.elementwise_affine:
+                out = out * self.weight.view(1, -1, 1, 1)
+                if self.bias is not None:
+                    out = out + self.bias.view(1, -1, 1, 1)
+            return out
 
 # register normalization function here
 REGISTERED_NORM_DICT: dict[str, type] = {

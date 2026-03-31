@@ -1,6 +1,9 @@
 import torch
+# try:
 import triton
 import triton.language as tl
+# except ImportError:
+    # TritonRMSNorm2dFunc = None
 
 __all__ = ["TritonRMSNorm2dFunc"]
 
