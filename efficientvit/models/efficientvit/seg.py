@@ -343,18 +343,18 @@ def efficientvit_seg_l2(dataset: str, **kwargs) -> EfficientViTSeg:
 
 def efficientvit_seg_custom(*, backbone:str = 'efficientvit_backbone_l2', 
                             n_classes=150, 
+                            head_stride=8,
                             **kwargs):
     from efficientvit.models.efficientvit import backbone as backbone_module
     
     backbone_class = getattr(backbone_module, backbone)
     backbone = backbone_class(**kwargs)
-    n_classes = kwargs.get('n_classes', 150)    
     
     head = SegHead(
     fid_list=["stage4", "stage3", "stage2"],
     in_channel_list=[512, 256, 128],
     stride_list=[32, 16, 8],
-    head_stride=8,
+    head_stride=head_stride,
     head_width=128,
     head_depth=3,
     expand_ratio=4,
